@@ -82,7 +82,7 @@ export default async function DashboardPage() {
       <footer className="mt-20 border-t border-zinc-900 bg-zinc-950 py-10">
         <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
           <p className="text-xs text-zinc-600">
-            &copy; 2024 SmartBookmark App. All rights reserved. Built with Next.js & Supabase.
+            &copy; 2026 SmartBookmark App. All rights reserved. Built with Next.js & Supabase.
           </p>
         </div>
       </footer>
