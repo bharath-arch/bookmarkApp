@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🔖 Smart Bookmark App
 
-## Getting Started
+A production-ready personal bookmark manager built with **Next.js 15**, **Supabase**, and **Tailwind CSS**. This app allows users to save, organize, and manage their links with real-time synchronization across devices.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Google OAuth**: Fast and secure authentication.
+- **Real-time Updates**: Instant UI synchronization when bookmarks are added or deleted.
+- **Private Storage**: Secure Row Level Security (RLS) ensuring users only see their own bookmarks.
+- **Modern UI**: Sleek dark-mode interface built with Tailwind CSS and Lucide icons.
+- **Optimistic UI**: Instant responsiveness for a smooth user experience.
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js](https://nextjs.org/) (App Router)
+- **Database & Auth**: [Supabase](https://supabase.com/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Deployment**: [Vercel](https://vercel.com/)
+
+## 🧠 Technical Challenges & Solutions
+
+As a first-time Supabase user, I encountered several interesting challenges regarding security and real-time data:
+
+### 1. The RLS vs. Real-time Broadcast Gap
+**Problem**: After enabling Row Level Security (RLS), real-time `INSERT` events stopped working on the frontend, even though `DELETE` events worked fine.
+**Solution**: We discovered that for RLS to work with Real-time broadcasts, the table must have its **Replica Identity** set to **FULL**. 
+```sql
+ALTER TABLE bookmarks REPLICA IDENTITY FULL;
+```
+This ensures the database sends the entire row data to the Real-time engine, allowing it to verify that the `auth.uid()` matches the `user_id` before broadcasting.
+
+### 2. Post-Deployment Redirect Loop
+**Problem**: After hosting on Vercel, logging in redirected the browser back to `localhost:3000`.
+**Solution**: This was resolved by updating the **Site URL** and **Redirect URIs** in the Supabase Dashboard (Authentication > URL Configuration) to match the Vercel production domain.
+
+### 3. Subscription Race Conditions
+**Problem**: Real-time subscriptions sometimes failed to initialize before the initial data fetch.
+**Solution**: Implemented a robust `useEffect` hook in the `BookmarkList` component that handles clean-up and uses unique channel names to avoid subscription conflicts.
+
+## ⚙️ Setup Instructions
+
+### 1. Environment Variables
+Create a `.env.local` file with your Supabase credentials:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Supabase SQL Schema
+Run this in your Supabase SQL Editor:
+```sql
+create table bookmarks (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid default auth.uid() references auth.users not null,
+  title text not null,
+  url text not null,
+  created_at timestamp with time zone default now()
+);
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+alter table bookmarks enable row level security;
+alter table bookmarks replica identity full;
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+create policy "Users can operate on own bookmarks" 
+on bookmarks for all using (auth.uid() = user_id);
 
-## Learn More
+alter publication supabase_realtime add table bookmarks;
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
